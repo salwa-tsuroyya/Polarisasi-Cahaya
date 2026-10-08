@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebAR - Polarisasi Cahaya (Hukum Malus)</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800 min-h-screen flex flex-col">
+
+    <!-- Header -->
+    <header class="bg-indigo-700 text-white shadow-md py-3 px-4 flex justify-between items-center">
+        <h1 class="text-sm md:text-base font-bold flex items-center gap-1.5">
+            🔍 Simulasi Polarisasi Cahaya & Hukum Malus
+        </h1>
+        <span class="text-[10px] bg-indigo-800 px-2.5 py-1 rounded-full border border-indigo-600">Fisika Digital</span>
+    </header>
+
+    <!-- Main Container -->
+    <div class="flex-1 flex flex-col p-3 gap-3 max-w-2xl mx-auto w-full">
+        
+        <!-- Area Simulasi Canvas -->
+        <div class="bg-gray-900 rounded-xl overflow-hidden relative shadow-md flex flex-col items-center justify-center h-60 w-full">
+            <div class="absolute top-2 left-2 bg-black/60 backdrop-blur-md text-white text-[10px] px-2.5 py-1 rounded-full border border-white/10 flex items-center gap-1.5 z-10">
+                <span class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
+                Visualisasi Vektor Medan Listrik & Analisator
+            </div>
+            
+            <canvas id="simCanvas" class="w-full h-full"></canvas>
+            
+            <div class="absolute bottom-2 left-2 text-[10px] text-white/90 bg-black/60 px-2 py-0.5 rounded backdrop-blur-sm border border-white/10 z-10">
+                Transmisi Intensitas Cahaya Berdasarkan θ
+            </div>
+        </div>
+
+        <!-- Panel LKPD & Kontrol Interaktif -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 space-y-3 text-sm">
+            <div class="bg-indigo-50 px-3 py-2 rounded-lg border border-indigo-100 flex justify-between items-center">
+                <h2 class="font-semibold text-indigo-950 text-xs md:text-sm">📝 LKPD Berbasis PBL: Gelombang Cahaya</h2>
+                <span class="text-[10px] text-indigo-700 font-medium">Fase 1 & 2: Orientasi & Eksplorasi</span>
+            </div>
+
+            <!-- Panduan LKPD -->
+            <div class="p-3 bg-amber-50 border-l-4 border-amber-400 rounded-r-lg space-y-1 text-xs">
+                <p class="font-semibold text-amber-900">Petunjuk Eksperimen Maya:</p>
+                <p class="text-amber-800">
+                    Bagaimana kacamata khusus dapat meredam silau cahaya matahari? Geser sudut putar analisator (θ) dan amati bagaimana vektor amplitudo gelombang serta nilai intensitas (I) berubah sesuai Hukum Malus!
+                </p>
+            </div>
+
+            <!-- Slider Sudut Analisator -->
+            <div>
+                <div class="flex justify-between items-center mb-1 text-xs">
+                    <label class="font-medium text-gray-700">Sudut Putar Analisator (θ):</label>
+                    <span id="angleVal" class="font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">0°</span>
+                </div>
+                <input type="range" id="angleRange" min="0" max="90" value="0" class="w-full accent-indigo-600 cursor-pointer">
+            </div>
+
+            <!-- Hasil Analisis & Perhitungan -->
+            <div class="p-3 bg-gray-50 rounded-lg border border-gray-200 space-y-2">
+                <h3 class="font-semibold text-gray-900 text-xs border-b pb-1">📊 Hasil Pengamatan & Analisis:</h3>
+                <div class="grid grid-cols-2 gap-2 text-center">
+                    <div class="bg-white p-2 rounded-lg border border-gray-200">
+                        <span class="block text-[10px] text-gray-500">Intensitas Akhir (I)</span>
+                        <span id="resIntensity" class="text-xs font-bold text-indigo-600">100% dari I₀</span>
+                    </div>
+                    <div class="bg-white p-2 rounded-lg border border-gray-200">
+                        <span class="block text-[10px] text-gray-500">Kondisi Transmisi</span>
+                        <span id="resStatus" class="text-xs font-bold text-indigo-600">Maksimum (Terang)</span>
+                    </div>
+                </div>
+                <div class="text-[11px] text-gray-600 bg-indigo-50/50 p-2 rounded border border-indigo-100 flex justify-between items-center">
+                    <span class="font-semibold text-indigo-900">Hukum Malus: I = I₀ · cos²(θ)</span>
+                    <span class="text-[10px] bg-indigo-600 text-white px-2 py-0.5 rounded">PBL Task</span>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Script Simulasi Canvas & Fisika -->
+    <script>
+        const canvas = document.getElementById('simCanvas');
+        const ctx = canvas.getContext('2d');
+        const angleRange = document.getElementById('angleRange');
+        const angleVal = document.getElementById('angleVal');
+        const resIntensity = document.getElementById('resIntensity');
+        const resStatus = document.getElementById('resStatus');
+
+        function resizeCanvas() {
+            canvas.width = canvas.parentElement.clientWidth;
+            canvas.height = canvas.parentElement.clientHeight;
+            drawSimulation();
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+
+        function drawSimulation() {
+            const width = canvas.width;
+            const height = canvas.height;
+            ctx.clearRect(0, 0, width, height);
+
+            const thetaDeg = parseFloat(angleRange.value);
+            const thetaRad = thetaDeg * (Math.PI / 180);
+            angleVal.innerText = thetaDeg + '°';
+
+            const I_ratio = Math.pow(Math.cos(thetaRad), 2);
+            resIntensity.innerText = (I_ratio * 100).toFixed(1) + '% dari I₀';
+            
+            if (I_ratio > 0.8) {
+                resStatus.innerText = "Maksimum (Terang)";
+            } else if (I_ratio < 0.1) {
+                resStatus.innerText = "Minimum (Gelap Total)";
+            } else {
+                resStatus.innerText = "Sebagian (Redup)";
+            }
+
+            ctx.fillStyle = '#0b0f19';
+            ctx.fillRect(0, 0, width, height);
+
+            const centerY = height / 2;
+            const startX = 30;
+            const endX = width - 30;
+            const mid1X = width * 0.35;
+            const mid2X = width * 0.65;
+
+            ctx.strokeStyle = 'rgba(100, 200, 255, 0.4)';
+            ctx.lineWidth = 1.5;
+            for (let x = startX; x < mid1X; x += 12) {
+                ctx.beginPath();
+                ctx.moveTo(x, centerY - 35);
+                ctx.lineTo(x, centerY + 35);
+                ctx.stroke();
+            }
+
+            ctx.fillStyle = '#334155';
+            ctx.fillRect(mid1X - 6, centerY - 55, 12, 110);
+            ctx.strokeStyle = '#38bdf8';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(mid1X - 6, centerY - 55, 12, 110);
+
+            ctx.strokeStyle = '#38bdf8';
+            ctx.lineWidth = 2;
+            for (let x = mid1X + 15; x < mid2X; x += 15) {
+                ctx.beginPath();
+                ctx.moveTo(x, centerY - 30);
+                ctx.lineTo(x, centerY + 30);
+                ctx.stroke();
+            }
+
+            ctx.save();
+            ctx.translate(mid2X, centerY);
+            ctx.rotate(thetaRad);
+            ctx.fillStyle = '#475569';
+            ctx.fillRect(-6, -55, 12, 110);
+            ctx.strokeStyle = '#f43f5e';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(-6, -55, 12, 110);
+            ctx.restore();
+
+            let finalAmp = 30 * Math.cos(thetaRad);
+            let alphaColor = Math.max(0.1, I_ratio);
+            ctx.strokeStyle = `rgba(244, 63, 94, ${alphaColor})`;
+            ctx.lineWidth = 2;
+            for (let x = mid2X + 15; x < endX - 10; x += 15) {
+                ctx.beginPath();
+                ctx.moveTo(x, centerY - finalAmp);
+                ctx.lineTo(x, centerY + finalAmp);
+                ctx.stroke();
+            }
+
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+            ctx.setLineDash([4, 4]);
+            ctx.beginPath();
+            ctx.moveTo(startX, centerY);
+            ctx.lineTo(endX, centerY);
+            ctx.stroke();
+            ctx.setLineDash([]);
+        }
+
+        angleRange.addEventListener('input', drawSimulation);
+        resizeCanvas();
+    </script>
+</body>
+</html>
